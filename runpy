@@ -22,26 +22,25 @@ def run_script(env_dir, script, args):
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: runpy programma.py [args...]")
+        print("Usage: runpy your_script.py [args...]")
         return
     script = sys.argv[1]
     env = os.path.join(".venv-runpy", os.path.basename(script))
     os.makedirs(".venv-runpy", exist_ok=True)
 
-    print(f"🧠 Analisi dipendenze di {script}...")
+    print(f"🧠 Analyzing dependencies in {script}...")
     deps = parse_imports(script)
-    print("📦 Dipendenze trovate:", deps)
+    print("📦 Dependencies found:", deps)
 
-    print(f"📁 Creo ambiente virtuale in {env}...")
+    print(f"📁 Creating virtual environment in {env}...")
     create_env(env)
 
     if deps:
-        print("📥 Installo dipendenze...")
+        print("📥 Installing dependencies...")
         install_deps(env, deps)
 
-    print("🚀 Avvio script...")
+    print("🚀 Running script...")
     run_script(env, script, sys.argv[2:])
 
 if __name__ == "__main__":
     main()
-

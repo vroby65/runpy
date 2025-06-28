@@ -4,10 +4,25 @@ import os, sys, subprocess, re
 def parse_imports(file):
     with open(file) as f:
         code = f.read()
-    imports = re.findall(r'^\s*(?:import|from)\s+([\w\.]+)', code, re.M)
-    std = sys.stdlib_module_names if hasattr(sys, "stdlib_module_names") else []
-    return sorted(set(i.split('.')[0] for i in imports if i not in std))
 
+    std = sys.stdlib_module_names if hasattr(sys, "stdlib_module_names") else []
+
+    # Trova sia "import x", sia "from x import y"
+    matches = re.findall(r'^\s*(?:import|from)\s+([^\n]+)', code, re.M)
+    modules = set()
+
+    for line in matches:
+        parts = re.split(r'[ ,]+', line)
+        for part in parts:
+            if part in ("as", "import"):
+                continue
+            name = part.split('.')[0]
+            if name and name not in std and name.isidentifier():
+                modules.add(name)
+
+    return sorted(modules)
+
+    
 def create_env(env_dir):
     if not os.path.exists(env_dir):
         subprocess.run([sys.executable, "-m", "venv", env_dir], check=True)

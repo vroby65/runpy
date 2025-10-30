@@ -7,7 +7,7 @@ def parse_imports(file):
 
     std = sys.stdlib_module_names if hasattr(sys, "stdlib_module_names") else []
 
-    # Trova sia "import x", sia "from x import y"
+    # Trova sia "import x" che "from x import y"
     matches = re.findall(r'^\s*(?:import|from)\s+([^\n]+)', code, re.M)
     modules = set()
 
@@ -22,30 +22,59 @@ def parse_imports(file):
 
     return sorted(modules)
 
-    
+
+def parse_requirements(req_file):
+    """Legge requirements.txt ed estrae solo le righe valide."""
+    deps = []
+    with open(req_file) as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            deps.append(line)
+    return deps
+
+
 def create_env(env_dir):
     if not os.path.exists(env_dir):
         subprocess.run([sys.executable, "-m", "venv", env_dir], check=True)
+
 
 def install_deps(env_dir, deps):
     pip = os.path.join(env_dir, "bin", "pip")
     subprocess.run([pip, "install", *deps], check=True)
 
+
 def run_script(env_dir, script, args):
     py = os.path.join(env_dir, "bin", "python")
     os.execv(py, [py, script] + args)
+
 
 def main():
     if len(sys.argv) < 2:
         print("Usage: runpy your_script.py [args...]")
         return
+
     script = sys.argv[1]
     env = os.path.join(".venv-runpy", os.path.basename(script))
     os.makedirs(".venv-runpy", exist_ok=True)
 
     print(f"🧠 Analyzing dependencies in {script}...")
     deps = parse_imports(script)
-    print("📦 Dependencies found:", deps)
+
+    # Cerca requirements.txt (accanto allo script o nella cwd)
+    possible_locations = [
+        os.path.join(os.path.dirname(script), "requirements.txt"),
+        os.path.join(os.getcwd(), "requirements.txt")
+    ]
+
+    for req_file in possible_locations:
+        if os.path.isfile(req_file):
+            print(f"📄 Found {req_file}, including its dependencies...")
+            deps.extend(parse_requirements(req_file))
+
+    deps = sorted(set(deps))
+    print("📦 Dependencies found:", deps or "(none)")
 
     print(f"📁 Creating virtual environment in {env}...")
     create_env(env)
@@ -56,6 +85,7 @@ def main():
 
     print("🚀 Running script...")
     run_script(env, script, sys.argv[2:])
+
 
 if __name__ == "__main__":
     main()

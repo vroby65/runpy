@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
-import os, sys, subprocess, re
+import os
+import sys
+import subprocess
+import re
+
 
 def parse_imports(file):
+    """Parse a Python script and extract third-party import names."""
     with open(file) as f:
         code = f.read()
 
     std = sys.stdlib_module_names if hasattr(sys, "stdlib_module_names") else []
 
-    # Trova sia "import x" che "from x import y"
+    # Match both "import x" and "from x import y"
     matches = re.findall(r'^\s*(?:import|from)\s+([^\n]+)', code, re.M)
     modules = set()
 
@@ -24,7 +29,7 @@ def parse_imports(file):
 
 
 def parse_requirements(req_file):
-    """Legge requirements.txt ed estrae solo le righe valide."""
+    """Read a requirements.txt file and extract valid dependency lines."""
     deps = []
     with open(req_file) as f:
         for line in f:
@@ -36,21 +41,25 @@ def parse_requirements(req_file):
 
 
 def create_env(env_dir):
+    """Create a virtual environment if it doesn't already exist."""
     if not os.path.exists(env_dir):
         subprocess.run([sys.executable, "-m", "venv", env_dir], check=True)
 
 
 def install_deps(env_dir, deps):
+    """Install dependencies into the virtual environment."""
     pip = os.path.join(env_dir, "bin", "pip")
     subprocess.run([pip, "install", *deps], check=True)
 
 
 def run_script(env_dir, script, args):
+    """Execute the target script inside the isolated virtual environment."""
     py = os.path.join(env_dir, "bin", "python")
     os.execv(py, [py, script] + args)
 
 
 def main():
+    """Main entry point for the runpy tool."""
     if len(sys.argv) < 2:
         print("Usage: runpy your_script.py [args...]")
         return
@@ -62,7 +71,7 @@ def main():
     print(f"🧠 Analyzing dependencies in {script}...")
     deps = parse_imports(script)
 
-    # Cerca requirements.txt (accanto allo script o nella cwd)
+    # Look for requirements.txt next to the script or in the current directory
     possible_locations = [
         os.path.join(os.path.dirname(script), "requirements.txt"),
         os.path.join(os.getcwd(), "requirements.txt")
